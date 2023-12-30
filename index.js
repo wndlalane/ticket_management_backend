@@ -37,7 +37,7 @@ rotas = [
   
 
 app.get("/", (req, res) => {
-    res.json(rotas);
+    res.json({descricao:"Lista de routas para uso da API", 'rotas': rotas});
   });
 
 // Rota para obter todos os Clientes
