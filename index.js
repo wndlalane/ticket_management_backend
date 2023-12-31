@@ -14,36 +14,103 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Instruções para uso da API
 rotas = [
     {
-      nome: "clientes",
-      metodo: "GET",
-      descricao: "Obtém todos os clientes",
+        nome: "login",
+        metodo: "POST",
+        descricao: "Autenticacao do usuario",
     },
     {
-      nome: "tecnicos",
-      metodo: "GET",
-      descricao: "Obtém todos os técnicos",
+        nome: "signup",
+        metodo: "POST",
+        descricao: "Criar conta de autenticacao do usuario",
     },
     {
-      nome: "tickets",
-      metodo: "GET",
-      descricao: "Obtém todos os tickets",
+        nome: "logout",
+        metodo: "POST",
+        descricao: "Sair da conta",
     },
     {
-      nome: "tickets",
-      metodo: "POST",
-      descricao: "Cria um novo ticket",
+        nome: "clientes",
+        metodo: "GET",
+        descricao: "Obtém todos os clientes",
     },
-  ];
-  
+    {
+        nome: "tecnicos",
+        metodo: "GET",
+        descricao: "Obtém todos os técnicos",
+    },
+    {
+        nome: "tickets",
+        metodo: "GET",
+        descricao: "Obtém todos os tickets",
+    },
+    {
+        nome: "tickets",
+        metodo: "POST",
+        descricao: "Cria um novo ticket",
+    },
+];
+
 
 app.get("/", (req, res) => {
-    res.json({descricao:"Lista de routas para uso da API", 'rotas': rotas});
-  });
+    res.json({ descricao: "Lista de routas para uso da API", 'rotas': rotas });
+});
+
+
+// Rota para o login.
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        let { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+          })
+
+        if (error) {
+            return res.status(401).json({ error: error.message });
+        }
+
+        res.json({ success: true, message: 'Login successful', data });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+
+// Rota para criar conta
+app.post('/signup', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const { user, error } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+
+        if (error) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.json({ success: true, message: 'Account created successfully', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Rota para o logout.
+app.post('/logout', async (req, res) => {
+    await supabase.auth.signOut();
+
+    res.json({ success: true });
+});
 
 // Rota para obter todos os Clientes
 app.get('/clientes', async (req, res) => {
     const { data, error } = await supabase.from('usuario').select().eq('cliente', true);
-        
+
     if (error) {
         return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
     }
@@ -54,7 +121,7 @@ app.get('/clientes', async (req, res) => {
 // Rota para obter todos os Tecnicos
 app.get('/tecnicos', async (req, res) => {
     const { data, error } = await supabase.from('usuario').select().eq('tecnico', true);
-        
+
     if (error) {
         return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
     }
@@ -65,7 +132,7 @@ app.get('/tecnicos', async (req, res) => {
 // Rota para obter todos os tickets
 app.get('/tickets', async (req, res) => {
     const { data, error } = await supabase.from('ticket').select();
-        
+
     if (error) {
         return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
     }
