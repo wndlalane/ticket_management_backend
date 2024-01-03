@@ -70,7 +70,7 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: error.message });
         }
 
-        res.json({ success: true, message: 'Login successful', data });
+        res.json({ success: true, message: 'Login successful', access_token: data.session.access_token });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
@@ -81,22 +81,38 @@ app.post('/login', async (req, res) => {
 
 // Rota para criar conta
 app.post('/signup', async (req, res) => {
-    const { email, password } = req.body;
+    const { nome, email, password, tecnico, cliente } = req.body;
 
     try {
-        const { user, error } = await supabase.auth.signUp({
+        // SignUp no Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
             password,
         });
 
-        if (error) {
-            return res.status(400).json({ error: error.message });
+        if (authError) {
+            return res.status(400).json({ error: authError.message });
         }
 
-        res.json({ success: true, message: 'Account created successfully', user });
+        // Inserir dados no Supabase Database
+        const { data: insertData, error: insertError } = await supabase.from('usuario').insert([
+            {
+                nome,
+                email,
+                tecnico,
+                cliente,
+                usuario_id: authData.user.id
+            },
+        ]);
+
+        if (insertError) {
+            return res.status(500).json({ error: 'Erro ao criar um novo usuário no banco de dados Supabase' });
+        }
+
+        res.json({ success: true, message: 'Conta criada com sucesso', access_token: authData.session.access_token });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Erro do Servidor Interno' });
     }
 });
 
@@ -112,7 +128,7 @@ app.get('/clientes', async (req, res) => {
     const { data, error } = await supabase.from('usuario').select().eq('cliente', true);
 
     if (error) {
-        return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
+        return res.status(500).json({ error: 'Erro ao buscar tickets do Superbase' });
     }
 
     res.json(data);
@@ -123,7 +139,7 @@ app.get('/tecnicos', async (req, res) => {
     const { data, error } = await supabase.from('usuario').select().eq('tecnico', true);
 
     if (error) {
-        return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
+        return res.status(500).json({ error: 'Erro ao buscar tickets do Superbase' });
     }
 
     res.json(data);
@@ -131,13 +147,48 @@ app.get('/tecnicos', async (req, res) => {
 
 // Rota para obter todos os tickets
 app.get('/tickets', async (req, res) => {
-    const { data, error } = await supabase.from('ticket').select();
+    try {
+        // Obter todos os tickets
+        const { data: tickets, error } = await supabase
+            .from('ticket')
+            .select('*');
 
-    if (error) {
-        return res.status(500).json({ error: 'Error fetching tickets from Superbase' });
+        if (error) {
+            return res.status(500).json({ error: error });
+        }
+
+        // Obter todos os clientes
+        const { data: clientes, error: clientesError } = await supabase
+            .from('usuario')
+            .select('id, nome, email')
+            .in('id', tickets.map(ticket => ticket.cliente_id));
+
+        if (clientesError) {
+            return res.status(500).json({ error: clientesError });
+        }
+
+        // Obter todos os técnicos
+        const { data: tecnicos, error: tecnicosError } = await supabase
+            .from('usuario')
+            .select('id, nome, email')
+            .in('id', tickets.map(ticket => ticket.tecnico_id));
+
+        if (tecnicosError) {
+            return res.status(500).json({ error: 'Erro ao buscar técnicos do Superbase' });
+        }
+
+        // Combinar os dados
+        const ticketsCompletos = tickets.map(ticket => ({
+            ...ticket,
+            cliente: clientes.find(cliente => cliente.id === ticket.cliente_id),
+            tecnico: tecnicos.find(tecnico => tecnico.id === ticket.tecnico_id),
+        }));
+
+        res.json(ticketsCompletos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro interno no servidor' });
     }
-
-    res.json(data);
 });
 
 // Rota para criar um novo ticket
@@ -154,17 +205,17 @@ app.post('/tickets', async (req, res) => {
             descricao,
             cliente_id,
             tecnico_responsavel_id,
-            status: 'Aberto',
+            status: 0,
         },
     ]);
 
     if (error) {
-        return res.status(500).json({ error: 'Error creating a new ticket in Superbase' });
+        return res.status(500).json({ error: 'Erro ao criar um novo ticket no Superbase' });
     }
 
     res.json(data);
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`O servidor está rodando na porta ${PORT}`);
 });
