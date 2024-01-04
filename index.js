@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
+var cors = require('cors')
+app.use(cors())
 
 const app = express();
 const PORT = 3001;
