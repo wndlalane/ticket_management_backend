@@ -219,7 +219,7 @@ app.get('/tickets', async (req, res) => {
 });
 
 // Rota para obter todos os tickets de um usuário específico
-app.get('/user/:usuarioId/tickets', async (req, res) => {
+app.get('/usuario/:usuarioId/tickets', async (req, res) => {
     const userId = req.params.userId;
 
     try {
