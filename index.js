@@ -233,15 +233,22 @@ app.get('/usuario/:usuarioId/tickets', async (req, res) => {
             return res.status(500).json({ error: ticketsError });
         }
 
+        // Obter informações do cliente
+        const { data: clienteData, error: clienteError } = await supabase
+            .from('usuario')
+            .select('id, nome, email')
+            .eq('id', usuarioId)
+            .single();
+
+        if (clienteError) {
+            return res.status(500).json({ error: clienteError });
+        }
+
+        const cliente = clienteData;
+
         // Combinar os dados com informações de cliente e técnico
         const ticketsCompletos = await Promise.all(tickets.map(async ticket => {
-            const cliente = await supabase
-                .from('usuario')
-                .select('id, nome, email')
-                .eq('id', ticket.cliente_id)
-                .single();
-
-            let tecnico = {};
+            let tecnico = null;
 
             if (ticket.tecnico_id) {
                 const { data: tecnicoData, error: tecnicoError } = await supabase
@@ -259,7 +266,11 @@ app.get('/usuario/:usuarioId/tickets', async (req, res) => {
 
             return {
                 ...ticket,
-                cliente,
+                cliente: {
+                    id: cliente.id,
+                    nome: cliente.nome,
+                    email: cliente.email,
+                },
                 tecnico,
             };
         }));
