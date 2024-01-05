@@ -75,7 +75,7 @@ app.post('/login', async (req, res) => {
 
         const { data: userData, error: userError } = await supabase
             .from('usuario')
-            .select('id','nome, email, cliente, tecnico')
+            .select('id, nome, email, cliente, tecnico')
             .eq('usuario_id', data.user.id)
             .single();
 
