@@ -67,18 +67,38 @@ app.post('/login', async (req, res) => {
         let { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
-          })
+        })
 
         if (error) {
             return res.status(401).json({ error: error.message });
         }
 
-        res.json({ success: true, message: 'Login successful', access_token: data.session.access_token });
+        const { data: userData, error: userError } = await supabase
+            .from('usuario')
+            .select('id','nome, email, cliente, tecnico')
+            .eq('usuario_id', data.user.id)
+            .single();
+
+        if (userError) {
+            return res.status(500).json({ error: 'Erro ao buscar dados do usuário' });
+        }
+
+        const userWithDetails = {
+            id: userData.id,
+            nome: userData.nome,
+            email: userData.email,
+            cliente: userData.cliente,
+            tecnico: userData.tecnico,
+            token: data.session.access_token,
+        };
+
+        res.json({ success: true, message: 'Login successful', user: userWithDetails });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 
 
@@ -196,7 +216,7 @@ app.get('/tickets', async (req, res) => {
 
 // Rota para criar um novo ticket
 app.post('/tickets', async (req, res) => {
-    const { assunto, descricao, cliente_id, tecnico_responsavel_id } = req.body;
+    const { assunto, descricao, cliente_id, tecnico_id } = req.body;
 
     if (!assunto || !descricao) {
         return res.status(400).json({ error: 'Assunto e descrição são obrigatórios' });
@@ -207,7 +227,7 @@ app.post('/tickets', async (req, res) => {
             assunto,
             descricao,
             cliente_id,
-            tecnico_responsavel_id,
+            tecnico_id,
             status: 0,
         },
     ]);
@@ -216,8 +236,10 @@ app.post('/tickets', async (req, res) => {
         return res.status(500).json({ error: 'Erro ao criar um novo ticket no Superbase' });
     }
 
-    res.json(data);
+    res.json({ success: true });
 });
+
+
 
 app.listen(PORT, () => {
     console.log(`O servidor está rodando na porta ${PORT}`);
