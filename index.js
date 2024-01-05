@@ -92,7 +92,7 @@ app.post('/login', async (req, res) => {
             token: data.session.access_token,
         };
 
-        res.json({ success: true, message: 'Login successful', user: userWithDetails });
+        res.json({ success: true, message: 'Login successful', authentication: userWithDetails });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
