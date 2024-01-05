@@ -207,7 +207,7 @@ app.get('/tickets', async (req, res) => {
             return {
                 ...ticket,
                 cliente,
-                tecnico: tecnico || {}, 
+                tecnico: tecnico || {},
             };
         });
 
@@ -218,7 +218,58 @@ app.get('/tickets', async (req, res) => {
     }
 });
 
+// Rota para obter todos os tickets de um usuário específico
+app.get('/user/:usuarioId/tickets', async (req, res) => {
+    const userId = req.params.userId;
 
+    try {
+        // Obter todos os tickets associados a um usuário especifico
+        const { data: tickets, error: ticketsError } = await supabase
+            .from('ticket')
+            .select('*')
+            .eq('cliente_id', userId);
+
+        if (ticketsError) {
+            return res.status(500).json({ error: ticketsError });
+        }
+
+        // Combinar os dados com informações de cliente e técnico
+        const ticketsCompletos = await Promise.all(tickets.map(async ticket => {
+            const cliente = await supabase
+                .from('usuario')
+                .select('id, nome, email')
+                .eq('id', ticket.cliente_id)
+                .single();
+
+            let tecnico = {};
+
+            if (ticket.tecnico_id) {
+                const { data: tecnicoData, error: tecnicoError } = await supabase
+                    .from('usuario')
+                    .select('id, nome, email')
+                    .eq('id', ticket.tecnico_id)
+                    .single();
+
+                if (tecnicoError) {
+                    return res.status(500).json({ error: tecnicoError });
+                }
+
+                tecnico = tecnicoData;
+            }
+
+            return {
+                ...ticket,
+                cliente,
+                tecnico,
+            };
+        }));
+
+        res.json(ticketsCompletos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
+});
 
 // Rota para criar um novo ticket
 app.post('/tickets', async (req, res) => {
