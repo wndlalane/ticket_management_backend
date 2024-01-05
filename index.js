@@ -172,40 +172,44 @@ app.get('/tecnicos', async (req, res) => {
 app.get('/tickets', async (req, res) => {
     try {
         // Obter todos os tickets
-        const { data: tickets, error } = await supabase
+        const { data: tickets, error: ticketsError } = await supabase
             .from('ticket')
             .select('*');
 
-        if (error) {
-            return res.status(500).json({ error: error });
+        if (ticketsError) {
+            return res.status(500).json({ error: ticketsError });
         }
 
         // Obter todos os clientes
         const { data: clientes, error: clientesError } = await supabase
             .from('usuario')
-            .select('id, nome, email')
-            .in('id', tickets.map(ticket => ticket.cliente_id));
+            .select('id, nome, email');
 
         if (clientesError) {
             return res.status(500).json({ error: clientesError });
         }
 
-        // Obter todos os técnicos
+        // Obter todos os técnicos (se existirem)
         const { data: tecnicos, error: tecnicosError } = await supabase
             .from('usuario')
             .select('id, nome, email')
-            .in('id', tickets.map(ticket => ticket.tecnico_id));
+            .in('id', tickets.map(ticket => ticket.tecnico_id).filter(Boolean));
 
         if (tecnicosError) {
             return res.status(500).json({ error: 'Erro ao buscar técnicos do Superbase' });
         }
 
         // Combinar os dados
-        const ticketsCompletos = tickets.map(ticket => ({
-            ...ticket,
-            cliente: clientes.find(cliente => cliente.id === ticket.cliente_id),
-            tecnico: tecnicos.find(tecnico => tecnico.id === ticket.tecnico_id),
-        }));
+        const ticketsCompletos = tickets.map(ticket => {
+            const cliente = clientes.find(cliente => cliente.id === ticket.cliente_id);
+            const tecnico = tecnicos.find(tecnico => tecnico.id === ticket.tecnico_id);
+
+            return {
+                ...ticket,
+                cliente,
+                tecnico: tecnico || {}, 
+            };
+        });
 
         res.json(ticketsCompletos);
     } catch (error) {
@@ -213,6 +217,8 @@ app.get('/tickets', async (req, res) => {
         res.status(500).json({ error: 'Erro interno no servidor' });
     }
 });
+
+
 
 // Rota para criar um novo ticket
 app.post('/tickets', async (req, res) => {
