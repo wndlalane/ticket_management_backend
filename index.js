@@ -73,26 +73,26 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: error.message });
         }
 
-        const { data: userData, error: userError } = await supabase
+        const { data: usuarioData, error: usuarioError } = await supabase
             .from('usuario')
             .select('id, nome, email, cliente, tecnico')
             .eq('usuario_id', data.user.id)
             .single();
 
-        if (userError) {
+        if (usuarioError) {
             return res.status(500).json({ error: 'Erro ao buscar dados do usuário' });
         }
 
-        const userWithDetails = {
-            id: userData.id,
-            nome: userData.nome,
-            email: userData.email,
-            cliente: userData.cliente,
-            tecnico: userData.tecnico,
+        const usuarioWithDetails = {
+            id: usuarioData.id,
+            nome: usuarioData.nome,
+            email: usuarioData.email,
+            cliente: usuarioData.cliente,
+            tecnico: usuarioData.tecnico,
             token: data.session.access_token,
         };
 
-        res.json({ success: true, message: 'Login successful', authentication: userWithDetails });
+        res.json({ success: true, message: 'Login successful', authentication: usuarioWithDetails });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
@@ -220,14 +220,14 @@ app.get('/tickets', async (req, res) => {
 
 // Rota para obter todos os tickets de um usuário específico
 app.get('/usuario/:usuarioId/tickets', async (req, res) => {
-    const userId = req.params.userId;
+    const usuarioId = req.params.usuarioId;
 
     try {
         // Obter todos os tickets associados a um usuário especifico
         const { data: tickets, error: ticketsError } = await supabase
             .from('ticket')
             .select('*')
-            .eq('cliente_id', userId);
+            .eq('cliente_id', usuarioId);
 
         if (ticketsError) {
             return res.status(500).json({ error: ticketsError });
