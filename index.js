@@ -296,7 +296,7 @@ app.post('/tickets', async (req, res) => {
             descricao,
             cliente_id,
             tecnico_id,
-            status: 0,
+            status: "PENDENTE",
         },
     ]);
 
@@ -307,6 +307,32 @@ app.post('/tickets', async (req, res) => {
     res.json({ success: true });
 });
 
+// Rota para atualizar o status de um ticket
+app.put('/tickets/:ticketId/status', async (req, res) => {
+    const ticketId = req.params.ticketId;
+    const { status, tecnico_id } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ error: 'O status é obrigatório' });
+    }
+
+    try {
+        // Atualizar o status do ticket no Supabase
+        const { data, error } = await supabase
+            .from('ticket')
+            .update({ status, tecnico_id })
+            .eq('id', ticketId);
+
+        if (error) {
+            return res.status(500).json({ error: 'Erro ao atualizar o status do ticket no Superbase' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
+});
 
 
 app.listen(PORT, () => {
